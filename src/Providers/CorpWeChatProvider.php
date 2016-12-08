@@ -87,12 +87,11 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
         return $result;
     }
 
-    /**
-     * 获取 access token的路径.
-     */
+    // 必须实现...父类要求了..
+    //@Override
     protected function getTokenUrl()
     {
-        return $this->accessTokenApi;
+        return $this->getTokenUrl();
     }
 
     /**
@@ -101,7 +100,7 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
     protected function getUserByToken(AccessTokenInterface $token)
     {
         if (empty($token['UserId'])) {
-            throw new InvalidArgumentException('UserId of AccessToken is required.');
+            throw new InvalidArgumentException('UserId of AccessToken is required.' . json_encode($token) );
         }
 
         $response = $this->getHttpClient()->get($this->userInfoApi, [
@@ -142,7 +141,6 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
                 'corpsecret' => $this->clientSecret,
             ];
         }
-
         return [
             'access_token' => $this->config['longlive_access_token'],
             'code' => $code,
@@ -151,13 +149,14 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
 
     /**
      * 原始微信oauth 应该是返回 access token + openid
-     * 企业号因为用的是7200秒的, 所以需要支持从外部去获取access_token 不会冲突  要返回 userid.
+     * 企业号因为用的是7200秒的, 所以需要支持从外部去获取access_token 不会冲突 
+     * 这里期望返回的是 userid.
      */
     public function getAccessToken($code)
     {
         //没有指定则自己获取
         if (!$this->config['longlive_access_token']) {
-            $this->config['longlive_access_token'] = $this->getLongiveAccessToken();
+            $this->config['longlive_access_token'] = $this->_getLongiveAccessToken();
         }
         $param = $this->getTokenFields($code);
         $response = $this->getHttpClient()->get($this->userBaseInfoApi, [
@@ -165,6 +164,9 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
         ]);
         $content = $response->getBody()->getContents();
         $content = json_decode($content, true);
+        if(isset($content['errcode'])){
+            throw new \Overtrue\Socialite\AuthorizeFailedException('retrive userid failed: ' . json_encode([$content,$param]), [$content,$param]);
+        }
         $content['access_token'] = $this->config['longlive_access_token'];
         $token = $this->parseAccessToken($content);
 
@@ -172,10 +174,10 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
     }
 
     // !!应该尽量不要调用, 除非 单独与overture/wechat使用, 否则同时获取accesstoken, 会冲突
-    public function getLongiveAccessToken($force_refresh = false)
+    private function _getLongiveAccessToken($force_refresh = false)
     {
-        $getTokenUrl = $this->getTokenUrl();
-        $response = $this->getHttpClient()->get($getTokenUrl, [
+        
+        $response = $this->getHttpClient()->get($this->getTokenUrl(), [
             'query' => $this->getTokenFields(),
         ]);
         $content = $response->getBody()->getContents();
