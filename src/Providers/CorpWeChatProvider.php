@@ -100,7 +100,7 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
     protected function getUserByToken(AccessTokenInterface $token)
     {
         if (empty($token['UserId'])) {
-            throw new InvalidArgumentException('UserId of AccessToken is required.' . json_encode($token) );
+            throw new InvalidArgumentException('UserId of AccessToken is required. scan qrcode of copr account please' . json_encode($token) );
         }
 
         $response = $this->getHttpClient()->get($this->userInfoApi, [
