@@ -16,7 +16,6 @@ use Overtrue\Socialite\AccessTokenInterface;
 use Overtrue\Socialite\InvalidArgumentException;
 use Overtrue\Socialite\ProviderInterface;
 use Overtrue\Socialite\User;
-
 /**
  * Class WeChatProvider.
  *
@@ -100,7 +99,8 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
     protected function getUserByToken(AccessTokenInterface $token)
     {
         if (empty($token['UserId'])) {
-            throw new InvalidArgumentException('UserId of AccessToken is required. scan qrcode of copr account please' . json_encode($token) );
+
+            throw new InvalidArgumentException('UserId of AccessToken is required. scan qrcode of copr account please, $token json:' . json_encode($token) );
         }
 
         $response = $this->getHttpClient()->get($this->userInfoApi, [
@@ -164,7 +164,7 @@ class CorpWechatProvider extends AbstractProvider implements ProviderInterface
         ]);
         $content = $response->getBody()->getContents();
         $content = json_decode($content, true);
-        if(isset($content['errcode'])){
+        if(isset($content['errcode']) && $content['errcode']!==0){
             throw new \Overtrue\Socialite\AuthorizeFailedException('retrive userid failed: ' . json_encode([$content,$param]), [$content,$param]);
         }
         $content['access_token'] = $this->config['longlive_access_token'];
